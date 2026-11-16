@@ -1,0 +1,5 @@
+Project Title: Urban Heat Mitigation and Cooling Strategy Decision Tool
+Problem Statement ID: SIH 2026 (CSE 276)
+Registration Numbers of All Group Members: <RegNo1>, <RegNo2>, <RegNo3>
+GitHub Repository Link: https://github.com/shubh0bhadauria1/CSE-276-PROJECT
+Live Deployed Project Link: https://shubh0bhadauria1.github.io/CSE-276-PROJECT/

@@ -18,7 +18,7 @@ export default function App() {
   const [savedScenarios, setSavedScenarios] = useState([]);
 
   useEffect(() => {
-    fetch('/dashboard_data.json')
+    fetch(`${import.meta.env.BASE_URL}dashboard_data.json`)
       .then(r => r.json())
       .then(setData)
       .catch(console.error);
