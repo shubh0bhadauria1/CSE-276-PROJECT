@@ -1,44 +1,279 @@
-# Urban Heat Mitigation and Cooling Strategy Decision Tool (SIH 2026)
+# Urban Heat Mitigation and Cooling Strategy Decision Tool — SIH 2026
 
-**Course:** CSE 276 | **Course Outcomes:** CO3, CO4, CO5 | **Problem Statement ID:** SIH 2026
+> **Smart India Hackathon 2026 · Problem Statement CSE 276**  
+> **Course Outcomes:** CO3 (Data Analysis & Modelling) · CO4 (ML Pipeline Engineering) · CO5 (Explainable AI & Decision Support)
 
-## 1. Project Overview
-The **Urban Heat Mitigation and Cooling Strategy Decision Tool** is an end-to-end Machine Learning, Explainable AI (XAI), and interactive decision-support web application designed to help urban planners evaluate cooling interventions against the Urban Heat Island (UHI) effect.
+---
 
-- **Geospatial Feature Engineering & Data Quality Validation (CO3):** Automated acceptance checks across 4,000 urban, suburban, and green-zone observations.
-- **Supervised Regression & SHAP Explainability (CO4):** Comparative benchmarking of Ridge Regression, Random Forest, XGBoost, and LightGBM, paired with TreeSHAP feature attribution.
-- **Interactive Cooling Simulator & Uncertainty Quantification (CO5):** Real-time what-if simulator enabling policymakers to test tree canopy expansion, impervious surface reduction, cool-roof adoption, and water-body proximity with 95% confidence intervals (±0.98°C).
+## Table of Contents
 
-## 2. Dataset Details & Preprocessing
-- **Dataset Directory:** `Data/`
-- **Sample Size:** 4,000 spatial observations (`0.0%` missing values)
-- **Target Variable:** `LST` — Land Surface Temperature (32°C to 46°C; baseline mean: 35.36°C)
-- **Engineered Features:** `NDVI`, `Impervious_Surface_Pct`, `Albedo`, `Building_Density`, `Distance_to_Water_m`, and `Ambient_Temp_C`
-- **Acceptance Criteria Verified:**
-  - R² > 0.85 (**PASS:** `0.9823`)
-  - RMSE < 1.5°C (**PASS:** `0.502°C`)
-  - Missing Values = 0% (**PASS:** `0.0%`)
-  - Sample Count ≥ 3,500 (**PASS:** `4,000`)
+1. [Project Overview](#project-overview)
+2. [System Architecture](#system-architecture)
+3. [Key Features](#key-features)
+4. [Dataset](#dataset)
+5. [ML Pipeline Results](#ml-pipeline-results)
+6. [Installation & Execution](#installation--execution)
+7. [Project Structure](#project-structure)
+8. [Outputs](#outputs)
 
-## 3. Model Comparison & Top SHAP Drivers
-Four regression models were evaluated using an 80/20 train-test split and 5-fold cross-validation:
+---
 
-| Model | Role | R² Score | RMSE (°C) | Explainability |
-| :--- | :--- | :---: | :---: | :--- |
-| **LightGBM (Selected Best)** | Primary Production Model | **0.9823** | **0.502** | `shap.TreeExplainer` |
-| **XGBoost Regressor** | Gradient Boosted Benchmark | ~0.98 | ~0.52 | `shap.TreeExplainer` |
-| **Random Forest Regressor** | Bagging Ensemble Benchmark | ~0.97 | ~0.61 | `shap.TreeExplainer` |
-| **Ridge Regression** | Linear Baseline | ~0.91 | ~1.12 | `shap.LinearExplainer` |
+## Project Overview
 
-**Top Global SHAP Drivers (`mean |SHAP|`):** `Impervious_Surface_Pct` (1.898), `Ambient_Temp_C` (1.602), and `NDVI` (0.645).
+This tool addresses the **Urban Heat Island (UHI)** effect — a critical environmental challenge where cities experience significantly higher temperatures than surrounding rural areas due to impervious surfaces, reduced vegetation, and anthropogenic heat. It combines:
 
-## 4. Prerequisites
-- **Python:** 3.10+
-- **Node.js:** 18.0+ (with `npm`)
+- **Physically grounded ML regression** (Ridge, Random Forest, XGBoost, LightGBM) trained on 4,000 urban samples to predict **Land Surface Temperature (LST)** with R² = 0.9823.
+- **SHAP-based Explainable AI (XAI)** to quantify each feature's contribution to LST and prescribe targeted interventions.
+- **Interactive React dashboard** with 5 tabs: real-time intervention simulation, model comparison, data quality audit, scenario export, and CSV batch analysis.
 
-## 5. Installation & Execution Instructions
+**Goal:** Empower urban planners and policymakers with a data-driven, explainable decision-support system to prioritise and evaluate cooling strategies — green corridors, cool roofs, permeable paving, and water body proximity — before committing capital resources.
 
-### Step A: Run the ML Training & SHAP Pipeline
+---
+
+## System Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     Urban Heat Tool — SIH 2026                  │
+├─────────────────────────┬───────────────────────────────────────┤
+│    ML Pipeline (Python) │        Dashboard (React + Vite)        │
+│                         │                                         │
+│  data/                  │  dashboard/src/                         │
+│  └─ urban_heat_         │  ├─ tabs/TabSimulator.jsx   (Tab 1)    │
+│     physical_dataset.csv│  ├─ tabs/TabModels.jsx      (Tab 2)    │
+│                         │  ├─ tabs/TabDataQuality.jsx (Tab 3)    │
+│  ml_pipeline/           │  ├─ tabs/TabScenario.jsx    (Tab 4)    │
+│  ├─ train_models.py     │  └─ tabs/TabBatchAnalyzer.jsx(Tab 5)   │
+│  └─ outputs/            │                                         │
+│     ├─ dashboard_       │  Served via: npm run dev (port 5173)   │
+│     │   data.json  ─────┼──► Fetched at runtime by dashboard    │
+│     └─ shap_*.png       │                                         │
+└─────────────────────────┴───────────────────────────────────────┘
+```
+
+**Data flow:**
+1. `train_models.py` generates/validates dataset → trains 4 models → computes SHAP → exports `dashboard_data.json`.
+2. The React dashboard fetches `dashboard_data.json` at runtime and drives all 5 tabs from real metrics — zero hardcoded values.
+
+---
+
+## Key Features
+
+### Tab 1 — Interactive Intervention Simulator
+- **4 real-time sliders** mapped to NDVI, Impervious Surface Reduction, Albedo (cool roofs), and Water Body Proximity.
+- **Preset scenarios:** Green Corridor, Cool Roof Mandate, High-Density Retrofit, Reset Baseline.
+- **Animated KPI cards:** Baseline LST (35.36°C), Predicted Post-Intervention LST, Net Cooling ΔT, 95% CI (±0.98°C).
+- **10×10 Urban Zone Heatmap Grid** that updates in real-time as sliders move; pulsing cells indicate active heat islands.
+- **SHAP Contribution Waterfall** shows each intervention's exact °C contribution based on LightGBM directional sensitivities.
+- **Plain-English Justification Box** auto-generated by the model, with diminishing-returns warnings.
+
+### Tab 2 — Model Comparison & Global SHAP Explainability
+- Full benchmark table: Ridge, Random Forest, XGBoost, LightGBM — R², RMSE, MAE, 5-fold CV RMSE.
+- Interactive grouped bar chart and partial-dependence curve selector (all 6 features, 20 grid points each).
+
+### Tab 3 — Feature Engineering & Data Quality Pipeline
+- Visual cards for all 7 features with physical interpretation, min/max/mean ranges.
+- 7×7 colour-coded correlation matrix heatmap.
+- 4-item acceptance criteria checklist (all PASS).
+
+### Tab 4 — Scenario Comparison & Export
+- Save up to 3 simulated strategies, side-by-side efficiency comparison (°C/unit effort).
+- Export JSON and CSV decision summaries.
+
+### Tab 5 — CSV Batch Analyzer (Prescriptive Decision Engine)
+- Drag-and-drop CSV upload **or** one-click sample 8-ward city data.
+- Automated zone-by-zone LST inference, Heat Risk Tier (Critical/High/Moderate), and Primary Heat Driver.
+- Prescribes tailored cooling strategy per zone with projected post-intervention LST and ΔT.
+- Sortable/filterable results table; "⚡ Simulate" button syncs any zone's strategy to live sliders in Tab 1.
+- Export full action plan as CSV.
+
+---
+
+## Dataset
+
+| Property | Value |
+|---|---|
+| **Source** | Physically synthesised (generator embedded in `train_models.py`) |
+| **Samples** | 4,000 (urban 40%, suburban 35%, green zone 25%) |
+| **Missing values** | 0% |
+| **Target variable** | `LST` — Land Surface Temperature (°C), range 32–46°C |
+| **Train / Test split** | 3,200 / 800 (80/20, `random_state=42`) |
+| **Cross-validation** | 5-fold KFold |
+
+### Features
+
+| Feature | Range | Physical Meaning |
+|---|---|---|
+| `NDVI` | 0.00 – 0.90 | Vegetation density; higher = more evapotranspirative cooling |
+| `Impervious_Surface_Pct` | 0.00 – 0.98 | Fraction of paved surface; primary UHI driver |
+| `Albedo` | 0.08 – 0.35 | Surface reflectivity; higher = less heat absorbed |
+| `Building_Density` | 0.00 – 0.95 | Fraction of built-up area; anthropogenic heat source |
+| `Distance_to_Water_m` | 11 – 7,991 m | Proximity to water body; negative correlation with LST |
+| `Ambient_Temp_C` | 28 – 38°C | Background air temperature; linear LST baseline driver |
+
+### Physical LST Generation Formula
+
+```
+LST = Ambient_Temp_C
+    + 8.0 × Impervious_Surface_Pct
+    - 7.0 × NDVI
+    - 6.0 × Albedo
+    + 4.5 × Building_Density
+    - 1.5 × ln(1 + Distance_to_Water_m / 1000)
+    + ε   (ε ~ N(0, 0.5))
+```
+Clipped to [32°C, 46°C] to reflect physically observed surface temperature range.
+
+### Data Quality Checks (all passed)
+
+| Criterion | Threshold | Result |
+|---|---|---|
+| Best-model R² | > 0.85 | **0.9823** ✅ |
+| Best-model RMSE | < 1.5°C | **0.502°C** ✅ |
+| Missing values | 0% | **0.0%** ✅ |
+| Minimum samples | ≥ 3,500 | **4,000** ✅ |
+
+---
+
+## ML Pipeline Results
+
+| Model | R² | RMSE (°C) | MAE (°C) | 5-fold CV RMSE |
+|---|---|---|---|---|
+| Ridge | 0.8437 | 1.4919 | 1.2274 | 1.4546 |
+| Random Forest | 0.9779 | 0.5607 | 0.3807 | 0.5870 |
+| XGBoost | 0.9806 | 0.5260 | 0.3679 | 0.5256 |
+| **LightGBM ★** | **0.9823** | **0.5020** | **0.3448** | **0.5100** |
+
+**Best model:** LightGBM — selected by highest test R².
+
+### Top SHAP Feature Importances (LightGBM)
+
+| Feature | Mean \|SHAP\| | Direction |
+|---|---|---|
+| Impervious_Surface_Pct | 1.8983 | ↑ heating |
+| Ambient_Temp_C | 1.6019 | ↑ heating |
+| NDVI | 0.6452 | ↓ cooling |
+| Building_Density | 0.4113 | ↑ heating |
+| Distance_to_Water_m | 0.3720 | ↑ slight heating |
+| Albedo | 0.0993 | ↓ cooling |
+
+---
+
+## Installation & Execution
+
+### Prerequisites
+
+- **Python 3.10+** (tested on 3.14)
+- **Node.js 18+** and **npm 9+**
+
+---
+
+### Step 1 — Install Python Dependencies
+
 ```bash
+# From the project root
 pip install -r requirements.txt
-python ml_pipeline/train_models.py
+```
+
+### Step 2 — Run the ML Pipeline
+
+```bash
+# From the project root (Windows)
+py ml_pipeline/train_models.py
+```
+
+Expected output: trains all 4 models, prints SHAP plots, saves:
+- `ml_pipeline/outputs/dashboard_data.json` (9.5 KB)
+- `ml_pipeline/outputs/metrics.csv`
+- `ml_pipeline/outputs/shap_*.png` (4 plots)
+- `ml_pipeline/outputs/shap_values_*.csv` (4 files)
+- `data/urban_heat_physical_dataset.csv`
+
+> **Runtime:** ~2–4 minutes (SHAP for 300-tree Random Forest is the bottleneck).
+
+---
+
+### Step 3 — Install Dashboard Dependencies
+
+```bash
+cd dashboard
+npm install
+```
+
+### Step 4 — Start the Dashboard
+
+```bash
+npm run dev
+```
+
+Open **http://localhost:5173/** in your browser. All 5 tabs are powered by real model outputs from `dashboard_data.json`.
+
+### Step 5 — Production Build (optional)
+
+```bash
+npm run build
+```
+
+Outputs optimised bundle to `dashboard/dist/`.
+
+---
+
+## Project Structure
+
+```
+Urban Heat Tool/
+├── requirements.txt                    ← Python dependencies
+├── README.md                           ← This file
+│
+├── data/
+│   ├── urban_heat_island_dataset.csv   ← Original dataset (500 rows)
+│   └── urban_heat_physical_dataset.csv ← Physical dataset (4,000 rows)
+│
+├── ml_pipeline/
+│   ├── train_models.py                 ← Full ML + SHAP pipeline
+│   └── outputs/
+│       ├── dashboard_data.json         ← Master JSON for dashboard
+│       ├── metrics.csv
+│       ├── shap_ridge.png
+│       ├── shap_random_forest.png
+│       ├── shap_xgboost.png
+│       ├── shap_lightgbm.png
+│       └── shap_values_*.csv
+│
+└── dashboard/
+    ├── public/
+    │   └── dashboard_data.json         ← Served to React app
+    ├── src/
+    │   ├── App.jsx                     ← 5-tab router
+    │   ├── index.css                   ← Light theme design system
+    │   ├── utils.js
+    │   ├── components/
+    │   │   ├── Header.jsx
+    │   │   ├── KpiCard.jsx
+    │   │   ├── HeatGrid.jsx
+    │   │   └── ShapWaterfall.jsx
+    │   └── tabs/
+    │       ├── TabSimulator.jsx        ← Tab 1
+    │       ├── TabModels.jsx           ← Tab 2
+    │       ├── TabDataQuality.jsx      ← Tab 3
+    │       ├── TabScenario.jsx         ← Tab 4
+    │       └── TabBatchAnalyzer.jsx    ← Tab 5
+    ├── package.json
+    └── vite.config.js
+```
+
+---
+
+## Outputs
+
+| Output | Location | Description |
+|---|---|---|
+| Dashboard JSON | `ml_pipeline/outputs/dashboard_data.json` | Models, SHAP, uncertainty, data quality |
+| SHAP plots | `ml_pipeline/outputs/shap_*.png` | Bar summary plots for 4 models |
+| SHAP matrices | `ml_pipeline/outputs/shap_values_*.csv` | Raw 800×6 SHAP arrays |
+| Metrics table | `ml_pipeline/outputs/metrics.csv` | R², RMSE, MAE, CV RMSE |
+| Physical dataset | `data/urban_heat_physical_dataset.csv` | 4,000 synthesised samples |
+
+---
+
+*Built for SIH 2026 — Smart India Hackathon | Urban Heat & Climate Resilience Track*

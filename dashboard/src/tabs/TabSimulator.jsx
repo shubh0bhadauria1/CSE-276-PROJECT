@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import KpiCard from '../components/KpiCard.jsx';
 import HeatGrid from '../components/HeatGrid.jsx';
 import ShapWaterfall from '../components/ShapWaterfall.jsx';
@@ -79,13 +79,24 @@ function JustificationBox({ sliders, delta, bestModel }) {
   );
 }
 
-export default function TabSimulator({ data, savedScenarios, setSavedScenarios }) {
+export default function TabSimulator({ data, savedScenarios, setSavedScenarios,
+  externalSliders, onExternalSlidersConsumed }) {
   const baseline = data.uncertainty.baseline_lst;
   const ci95     = data.uncertainty.ci_95;
   const sens     = data.shap_importance.directional_sensitivity_per_unit;
   const bestModel= data.shap_importance.best_model;
 
   const [sliders, setSliders] = useState(PRESETS['Reset Baseline']);
+  const [injectedZone, setInjectedZone] = useState(false);
+
+  // Consume external sliders pushed by Tab 5 "Simulate" button
+  useEffect(() => {
+    if (externalSliders) {
+      setSliders(prev => ({ ...prev, ...externalSliders }));
+      setInjectedZone(true);
+      onExternalSlidersConsumed?.();
+    }
+  }, [externalSliders, onExternalSlidersConsumed]);
 
   const delta    = useMemo(() => computeDelta(sliders, sens), [sliders, sens]);
   const predicted = Math.max(32, Math.min(46, baseline + delta));
@@ -134,6 +145,23 @@ export default function TabSimulator({ data, savedScenarios, setSavedScenarios }
           Adjust interventions and see real-time LST predictions powered by {bestModel} SHAP sensitivities.
         </p>
       </div>
+
+      {/* Injection banner from Tab 5 */}
+      {injectedZone && (
+        <div className="fade-in" style={{ marginBottom: 16, padding: '10px 16px', borderRadius: 8,
+          background: '#EFF6FF', border: '1px solid #BFDBFE',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 16 }}>📂</span>
+            <span style={{ fontSize: 12, color: '#1D4ED8', fontWeight: 600 }}>
+              Zone strategy loaded from CSV Batch Analyzer — sliders set to prescribed intervention levels.
+            </span>
+          </div>
+          <button onClick={() => setInjectedZone(false)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer',
+              color: '#93C5FD', fontSize: 16, lineHeight: 1 }}>×</button>
+        </div>
+      )}
 
       {/* KPI Row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 24 }}>
