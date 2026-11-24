@@ -22,7 +22,7 @@ export default function App() {
   const [simulatorSliders, setSimulatorSliders] = useState(null);
 
   useEffect(() => {
-    fetch('/dashboard_data.json')
+    fetch(`${import.meta.env.BASE_URL}dashboard_data.json`)
       .then(r => r.json())
       .then(setData)
       .catch(console.error);
